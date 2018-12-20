@@ -3,12 +3,16 @@ import express from 'express';
 import {SERVER_PORT} from '../globals/environment';
 import http from 'http';
 import SocketIO from 'socket.io';
-
+import { UsuarioLista } from './usuario_lsitas';
+import {Usuario} from './usuario';
+//creando la clase servidor
 export default class Server{
+    //creando la variable del servidor express
     public app:express.Application;
     public port:Number;
     private httpServer:http.Server;
     public io:SocketIO.Server;
+    public usuariosConectados = new UsuarioLista();
 
     //constructor del server
     constructor(){
@@ -19,21 +23,42 @@ export default class Server{
         this.io = SocketIO(this.httpServer);
         this.escuchasSockets();
     }
+    
+    //programando getter de la unica instancia de la clase(patron de diseño singleton)
+    private static _instance:Server;
+    public static get instance(){
+        if(this._instance){
+            return this._instance;
+        }else{
+            this._instance = new this();
+            return this._instance
+        }
+    }
     //funcion para escuchar las conexiones
     public escuchasSockets(){
         console.log('Listo para escuchar conexiones o sockets');
         //el servidorescucha 
         this.io.on('connect',cliente=>{
-            console.log('nuevo cliente conectando');
+            console.log('nuevo cliente conectando', cliente.id);
+            const usuario = new Usuario(cliente.id);
+            this.usuariosConectados.agregar(usuario);
             //el cliente qeu se ha conectado previamente, escucha su desconexion
             cliente.on('disconnect',()=>{
                 console.log('el cliente se ha desconectado');
+                this.usuariosConectados.borrarUsuario(cliente.id);
             });
             //El cliente que se ha conectado previamente, escucha un evento de nombre:'mensaje'
         cliente.on('mensaje',(contenido)=>{
                 console.log('entrada',contenido);
                 this.io.emit('mensaje-nuevo',contenido);
-            })
+            });
+            cliente.on('configurar-usuario',(payload:any,callback:Function)=>{
+                this.usuariosConectados.antualizarNombre(cliente.id,payload.nombre);
+                callback({
+                    ok:true,
+                    mensaje:`Usuario ${payload.nombre} configurado`
+                });
+            });
         });
     }
 
