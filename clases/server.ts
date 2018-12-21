@@ -5,6 +5,7 @@ import http from 'http';
 import SocketIO from 'socket.io';
 import { UsuarioLista } from './usuario_lsitas';
 import {Usuario} from './usuario';
+import { emit } from 'cluster';
 //creando la clase servidor
 export default class Server{
     //creando la variable del servidor express
@@ -42,10 +43,14 @@ export default class Server{
             console.log('nuevo cliente conectando', cliente.id);
             const usuario = new Usuario(cliente.id);
             this.usuariosConectados.agregar(usuario);
+            
+          
+
             //el cliente qeu se ha conectado previamente, escucha su desconexion
             cliente.on('disconnect',()=>{
                 console.log('el cliente se ha desconectado');
                 this.usuariosConectados.borrarUsuario(cliente.id);
+                this.io.emit('usuarios-activos',this.usuariosConectados.getLista());
             });
             //El cliente que se ha conectado previamente, escucha un evento de nombre:'mensaje'
         cliente.on('mensaje',(contenido)=>{
@@ -54,10 +59,14 @@ export default class Server{
             });
             cliente.on('configurar-usuario',(payload:any,callback:Function)=>{
                 this.usuariosConectados.antualizarNombre(cliente.id,payload.nombre);
+                this.io.emit('usuarios-activos',this.usuariosConectados.getLista());
                 callback({
                     ok:true,
                     mensaje:`Usuario ${payload.nombre} configurado`
                 });
+            });
+            cliente.on('obtener-usuarios',()=>{
+                this.io.in(cliente.id).emit('usuarios-activos',this.usuariosConectados.getLista());
             });
         });
     }

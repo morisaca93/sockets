@@ -11,7 +11,12 @@ export class UsuarioLista{
 
     }
     public getLista(){
-        return this.lista;
+        let listaTemporal = this.lista.filter((usuario)=>{
+            if(usuario.nombre !== 'sin-nombre'){
+                return usuario;
+            }
+        });
+        return listaTemporal;
     }
     public antualizarNombre(id:string, nombre:string){
         for(let usuario of this.lista){
@@ -43,4 +48,5 @@ export class UsuarioLista{
         console.log("UsuarioLista[borrarUsuario] Nueva lsita de usuarios",this.lista);
 
     }
+    
 }
